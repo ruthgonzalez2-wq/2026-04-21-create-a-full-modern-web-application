@@ -1,7 +1,7 @@
 export const navItems = [
   { to: '/', label: 'Inicio' },
   { to: '/studio', label: 'Studio fotografico digital' },
-  { to: '/marketing', label: 'Marketing' },
+  { to: '/recursos', label: 'Recursos' },
   { to: '/helps', label: 'Helps educativa' },
   { to: '/ebooks', label: 'eBook' },
   { to: '/cursos', label: 'Cursos' },
@@ -9,29 +9,50 @@ export const navItems = [
 ]
 
 export const studioCategories = ['Fotos', 'Videos']
-export const marketingCategories = ['Imagenes', 'Videos', 'Campanas']
-export const helpsCategories = ['Juegos educativos', 'Tareas por encargo', 'Tutoriales']
-export const helpsSubjects = ['Matematicas', 'Lengua', 'Ciencias']
+export const marketingCategories = ['Plantillas', 'Videos', 'Diapositivas']
 export const aspectRatios = ['1:1', '16:9', '9:16', 'auto']
+export const publicationTypes = ['Entrada', 'Pagina interna', 'Enlace externo', 'PDF']
+export const publishStatuses = ['Publicado', 'Privado', 'Borrador']
+export const contentTypes = ['Entrada', 'Imagen', 'Video', 'Enlace externo', 'PDF']
+export const resourceAccessTypes = ['Gratis', 'De pago']
+export const destinationSections = ['Inicio', 'Studio', 'Recursos', 'Helps', 'eBooks', 'Cursos', 'Trabajos']
+export const destinationSectionOptions = [
+  { value: 'Inicio', label: 'Inicio' },
+  { value: 'Studio', label: 'Studio fotografico digital' },
+  { value: 'Recursos', label: 'Recursos' },
+  { value: 'Helps', label: 'Helps educativa' },
+  { value: 'eBooks', label: 'eBook' },
+  { value: 'Cursos', label: 'Cursos' },
+  { value: 'Trabajos', label: 'Trabajos' },
+]
 
 export const defaultData = {
   site: {
-    heroTitle: 'Digishoppress Multiverse',
+    brandName: 'Digishop Press Multiverse',
+    heroTitle: 'Digishop Press Multiverse',
     heroText:
       'Un espacio moderno para fotografia digital, ayuda educativa, libros, cursos y trabajos creativos.',
     logo: '',
     heroMediaType: 'image',
     heroMedia:
       'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1600&q=80',
+    paypalUrl: '',
   },
-  publications: [
+  publications: [],
+  pages: [
     {
-      id: 'pub-1',
-      title: 'Bienvenida',
-      description: 'Este es el espacio principal del sitio para mostrar novedades y contenido importante.',
-      image:
-        'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80',
-      category: 'Novedad',
+      id: 'page-about',
+      title: 'Sobre nosotros',
+      slug: 'sobre-nosotros',
+      summary: 'Conoce Digishop Press Multiverse, su mision y su vision.',
+      content:
+        'Digishop Press Multiverse es un espacio creativo y educativo pensado para compartir recursos digitales, fotografia, aprendizaje y contenido de valor.\n\nMision:\nOfrecer recursos y servicios digitales utiles, accesibles y bien presentados para apoyar a estudiantes, emprendedores y personas creativas.\n\nVision:\nConvertirse en un multiverso digital donde convivan la educacion, la creatividad, los recursos visuales y las soluciones practicas para distintos tipos de publico.',
+      status: 'Publicado',
+      targetSection: '',
+      coverImage: '',
+      videoUrl: '',
+      pdfFile: '',
+      tags: ['sobre nosotros', 'mision', 'vision'],
     },
   ],
   studio: {
@@ -44,35 +65,20 @@ export const defaultData = {
     },
   },
   marketing: {
-    title: 'Marketing Digishoppress',
+    title: 'Recursos',
     description:
-      'Area dedicada a piezas de marketing, campañas visuales, videos promocionales y recursos comerciales.',
+      'Catalogo de recursos visuales, plantillas, diapositivas y materiales digitales para mostrar, vender o compartir.',
     items: {
-      Imagenes: [],
+      Plantillas: [],
       Videos: [],
-      Campanas: [],
+      Diapositivas: [],
     },
   },
   helps: {
     title: 'Helps educativa',
-    description: 'Recursos organizados por categoria y materia.',
-    items: {
-      'Juegos educativos': {
-        Matematicas: [],
-        Lengua: [],
-        Ciencias: [],
-      },
-      'Tareas por encargo': {
-        Matematicas: [],
-        Lengua: [],
-        Ciencias: [],
-      },
-      Tutoriales: {
-        Matematicas: [],
-        Lengua: [],
-        Ciencias: [],
-      },
-    },
+    description: 'Espacio limpio para que publiques recursos educativos, entradas, videos, enlaces y archivos.',
+    tabs: [],
+    items: [],
   },
   ebooks: {
     title: 'Biblioteca digital',
@@ -81,12 +87,12 @@ export const defaultData = {
   },
   courses: {
     title: 'Cursos completos y tutoriales',
-    description: 'Cursos, carpetas y tutoriales organizados desde el panel.',
+    description: 'Cursos, carpetas y tutoriales organizados para aprender paso a paso.',
     items: [],
   },
   jobs: {
     title: 'Trabajos y servicios',
-    description: 'Publica servicios, propuestas y trabajos realizados.',
+    description: 'Servicios, propuestas y trabajos realizados.',
     items: [],
   },
   legal: {

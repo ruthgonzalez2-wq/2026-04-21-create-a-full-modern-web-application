@@ -1,10 +1,25 @@
-import { Link, NavLink } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { navItems } from '../data/defaultData'
 import { CookieConsent } from './CookieConsent'
 import { useSite } from '../state/SiteContext'
 
 export function Layout({ children }) {
-  const { data } = useSite()
+  const { data, isAdmin, setIsAdmin, isLoaded, saveMessage, saveState } = useSite()
+  const location = useLocation()
+  const isAdminRoute = location.pathname.startsWith('/admin')
+
+  useEffect(() => {
+    function handleKeydown(event) {
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'e') {
+        event.preventDefault()
+        setIsAdmin((current) => !current)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeydown)
+    return () => window.removeEventListener('keydown', handleKeydown)
+  }, [setIsAdmin])
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-slate-700">
@@ -21,7 +36,7 @@ export function Layout({ children }) {
               </div>
             )}
             <div>
-              <p className="text-lg font-semibold text-slate-800">Digishoppress Multiverse</p>
+              <p className="text-lg font-semibold text-slate-800">{data.site.brandName || 'Digishop Press Multiverse'}</p>
             </div>
           </Link>
           <nav className="flex flex-wrap gap-2">
@@ -38,30 +53,87 @@ export function Layout({ children }) {
                 {item.label}
               </NavLink>
             ))}
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                `rounded-full px-4 py-2 text-sm transition ${
-                  isActive ? 'bg-slate-800 text-white' : 'bg-slate-800 text-white hover:bg-slate-700'
-                }`
-              }
-            >
-              Administrar
-            </NavLink>
+            {isAdminRoute ? (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  `rounded-full px-4 py-2 text-sm transition ${
+                    isActive ? 'bg-slate-800 text-white' : 'bg-slate-800 text-white hover:bg-slate-700'
+                  }`
+                }
+              >
+                Administrar
+              </NavLink>
+            ) : null}
           </nav>
         </header>
 
         <main className="flex-1">{children}</main>
 
-        <footer className="glass mt-10 flex flex-col gap-4 px-5 py-5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 Digishoppress Multiverse</p>
-          <div className="flex flex-wrap gap-4">
-            <Link to="/terms">Terms and Conditions</Link>
-            <Link to="/privacy">Privacy Policy</Link>
+        <footer className="glass mt-10 flex flex-col gap-4 px-5 py-5 text-sm text-slate-500">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <p>&copy; 2026 {data.site.brandName || 'Digishop Press Multiverse'}. Todos los derechos reservados. Autor: Ruth Gonzalez</p>
+            <div className="flex flex-wrap gap-4">
+              <Link to="/pagina/sobre-nosotros">Sobre nosotros</Link>
+              <Link to="/terms">Terms and Conditions</Link>
+              <Link to="/privacy">Privacy Policy</Link>
+              {data.site.paypalUrl ? (
+                <a href={data.site.paypalUrl} target="_blank" rel="noreferrer">
+                  Donar con PayPal
+                </a>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+            <a href="mailto:digishoppress@gmail.com" className="transition hover:text-slate-800">
+              Correo: digishoppress@gmail.com
+            </a>
+            <a href="https://wa.me/18092561175" target="_blank" rel="noreferrer" className="transition hover:text-slate-800">
+              WhatsApp: 809 256 1175
+            </a>
           </div>
         </footer>
       </div>
+      {isAdminRoute && !isLoaded ? (
+        <div className="fixed left-4 top-4 z-40 rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-white">
+          Cargando sitio...
+        </div>
+      ) : null}
+      {isAdminRoute && saveMessage ? (
+        <div
+          className={`fixed bottom-4 left-4 z-40 rounded-full px-4 py-2 text-sm font-semibold text-white ${
+            saveState === 'error' ? 'bg-pink-500' : saveState === 'saved' ? 'bg-emerald-500' : 'bg-slate-800'
+          }`}
+        >
+          {saveMessage}
+        </div>
+      ) : null}
       <CookieConsent />
+      {isAdmin ? (
+        <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3">
+          {!isAdminRoute ? (
+            <Link
+              to="/admin"
+              className="rounded-full bg-slate-800 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-700"
+            >
+              Abrir editor
+            </Link>
+          ) : (
+            <Link
+              to="/"
+              className="rounded-full bg-white/90 px-5 py-3 text-sm font-semibold text-slate-700 shadow-lg transition hover:bg-white"
+            >
+              Volver al sitio
+            </Link>
+          )}
+          <button
+            className="rounded-full bg-white/90 px-4 py-2 text-xs font-semibold text-slate-700 shadow-md transition hover:bg-white"
+            onClick={() => setIsAdmin(false)}
+          >
+            Ocultar modo editor
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
