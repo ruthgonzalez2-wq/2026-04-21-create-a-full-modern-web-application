@@ -1,6 +1,7 @@
 import { ContactPanel } from '../components/ContactPanel'
 import { PageHero } from '../components/PageHero'
 import { SectionTabs } from '../components/SectionTabs'
+import { UniverseExplorer } from '../components/UniverseExplorer'
 import { useSite } from '../state/SiteContext'
 
 export function HomePage() {
@@ -15,6 +16,7 @@ export function HomePage() {
           media={data.site.heroMedia}
           mediaType={data.site.heroMediaType}
         />
+        <UniverseExplorer />
         <ContactPanel title="Haz tu consulta" />
       </div>
     </SectionTabs>

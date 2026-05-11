@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { navItems } from '../data/defaultData'
+import { AdCodeSlot } from './AdCodeSlot'
 import { CookieConsent } from './CookieConsent'
 import { useSite } from '../state/SiteContext'
 
@@ -31,7 +32,7 @@ export function Layout({ children }) {
                 <img className="h-11 w-11 object-cover" src={data.site.logo} alt="Logo Digishoppress Multiverse" />
               </div>
             ) : (
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#5DADE2,#F78FB3)] font-semibold text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#4A6FA5,#D39BCB,#F6D6BD)] font-semibold text-white">
                 D
               </div>
             )}
@@ -71,6 +72,7 @@ export function Layout({ children }) {
         <main className="flex-1">{children}</main>
 
         <footer className="glass mt-10 flex flex-col gap-4 px-5 py-5 text-sm text-slate-500">
+          <AdCodeSlot code={data.site.footerAdCode} title="Anuncio de pie de pagina" compact />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p>&copy; 2026 {data.site.brandName || 'Digishop Press Multiverse'}. Todos los derechos reservados. Autor: Ruth Gonzalez</p>
             <div className="flex flex-wrap gap-4">
@@ -88,8 +90,8 @@ export function Layout({ children }) {
             <a href="mailto:digishoppress@gmail.com" className="transition hover:text-slate-800">
               Correo: digishoppress@gmail.com
             </a>
-            <a href="https://wa.me/18092561175" target="_blank" rel="noreferrer" className="transition hover:text-slate-800">
-              WhatsApp: 809 256 1175
+            <a href="https://wa.me/18495408672" target="_blank" rel="noreferrer" className="transition hover:text-slate-800">
+              WhatsApp: 849 540 8672
             </a>
           </div>
         </footer>

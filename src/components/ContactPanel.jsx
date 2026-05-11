@@ -1,5 +1,5 @@
 const whatsappUrl =
-  'https://wa.me/18092561175?text=Hola%2C%20quiero%20hacer%20una%20consulta%20sobre%20Digishoppress%20Multiverse.'
+  'https://wa.me/18495408672?text=Hola%2C%20quiero%20hacer%20una%20consulta%20sobre%20Digishoppress%20Multiverse.'
 
 export function ContactPanel({ title = 'Consultas y contacto' }) {
   return (

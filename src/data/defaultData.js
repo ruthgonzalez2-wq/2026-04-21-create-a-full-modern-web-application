@@ -1,15 +1,15 @@
 export const navItems = [
   { to: '/', label: 'Inicio' },
   { to: '/studio', label: 'Studio fotografico digital' },
-  { to: '/recursos', label: 'Recursos' },
+  { to: '/recursos', label: 'Markeplacet' },
   { to: '/helps', label: 'Helps educativa' },
   { to: '/ebooks', label: 'eBook' },
   { to: '/cursos', label: 'Cursos' },
-  { to: '/trabajos', label: 'Trabajos' },
+  { to: '/trabajos', label: 'Recursos laborales' },
 ]
 
 export const studioCategories = ['Fotos', 'Videos']
-export const marketingCategories = ['Plantillas', 'Videos', 'Diapositivas']
+export const marketingCategories = ['Redes sociales', 'Educacion', 'Recursos laborales', 'Negocios']
 export const aspectRatios = ['1:1', '16:9', '9:16', 'auto']
 export const publicationTypes = ['Entrada', 'Pagina interna', 'Enlace externo', 'PDF']
 export const publishStatuses = ['Publicado', 'Privado', 'Borrador']
@@ -19,11 +19,11 @@ export const destinationSections = ['Inicio', 'Studio', 'Recursos', 'Helps', 'eB
 export const destinationSectionOptions = [
   { value: 'Inicio', label: 'Inicio' },
   { value: 'Studio', label: 'Studio fotografico digital' },
-  { value: 'Recursos', label: 'Recursos' },
+  { value: 'Recursos', label: 'Markeplacet' },
   { value: 'Helps', label: 'Helps educativa' },
   { value: 'eBooks', label: 'eBook' },
   { value: 'Cursos', label: 'Cursos' },
-  { value: 'Trabajos', label: 'Trabajos' },
+  { value: 'Trabajos', label: 'Recursos laborales' },
 ]
 
 export const defaultData = {
@@ -37,6 +37,8 @@ export const defaultData = {
     heroMedia:
       'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1600&q=80',
     paypalUrl: '',
+    footerAdCode: '',
+    sideAdCode: '',
   },
   publications: [],
   pages: [
@@ -65,13 +67,14 @@ export const defaultData = {
     },
   },
   marketing: {
-    title: 'Recursos',
+    title: 'Markeplace de recursos',
     description:
-      'Catalogo de recursos visuales, plantillas, diapositivas y materiales digitales para mostrar, vender o compartir.',
+      'Un espacio pensado para conectar necesidades con soluciones de forma rapida, practica y accesible.',
     items: {
-      Plantillas: [],
-      Videos: [],
-      Diapositivas: [],
+      'Redes sociales': [],
+      Educacion: [],
+      'Recursos laborales': [],
+      Negocios: [],
     },
   },
   helps: {
@@ -91,7 +94,7 @@ export const defaultData = {
     items: [],
   },
   jobs: {
-    title: 'Trabajos y servicios',
+    title: 'Recursos laborales',
     description: 'Servicios, propuestas y trabajos realizados.',
     items: [],
   },

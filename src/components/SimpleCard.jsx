@@ -1,4 +1,4 @@
-export function SimpleCard({ title, subtitle, description, image, media, mediaType, children, compact = false }) {
+export function SimpleCard({ title, subtitle, description, image, media, mediaType, children, compact = false, autoPlayMedia = false }) {
   const source = media || image
 
   return (
@@ -13,7 +13,11 @@ export function SimpleCard({ title, subtitle, description, image, media, mediaTy
                   : 'h-56 w-full object-cover'
               }
               src={source}
-              controls
+              controls={!autoPlayMedia}
+              autoPlay={autoPlayMedia}
+              muted={autoPlayMedia}
+              loop={autoPlayMedia}
+              playsInline
             />
           ) : (
             <img

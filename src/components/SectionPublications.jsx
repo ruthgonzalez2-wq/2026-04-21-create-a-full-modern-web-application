@@ -1,7 +1,59 @@
 import { Link } from 'react-router-dom'
+import { useMemo, useState } from 'react'
 
 function hasRichMarkup(value) {
   return /<\/?[a-z][\s\S]*>/i.test(value || '')
+}
+
+function stripHtml(value) {
+  return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function PublicationExcerpt({ value, limit = 220 }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const plainText = useMemo(() => stripHtml(value), [value])
+
+  if (!plainText) {
+    return null
+  }
+
+  const isLong = plainText.length > limit
+  const excerpt = isLong ? `${plainText.slice(0, limit).trim()}...` : plainText
+
+  return (
+    <div className="mt-3">
+      <p className="text-sm leading-7 text-slate-500">{excerpt}</p>
+      {isLong ? (
+        <>
+          <button className="mt-2 text-sm font-semibold text-sky-600 transition hover:text-sky-700" onClick={() => setIsExpanded(true)} type="button">
+            Ver mas
+          </button>
+          {isExpanded ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
+              <div className="glass max-h-[85vh] w-full max-w-3xl overflow-hidden p-3 shadow-2xl">
+                <div className="max-h-[75vh] overflow-y-auto rounded-[1.6rem] bg-white/88 p-6">
+                  {hasRichMarkup(value) ? (
+                    <div className="space-y-4 text-sm leading-7 text-slate-600" dangerouslySetInnerHTML={{ __html: value }} />
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm leading-7 text-slate-600">{plainText}</p>
+                  )}
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    className="rounded-full bg-[linear-gradient(135deg,var(--brand-blue),var(--brand-purple))] px-4 py-2 text-sm font-semibold text-white"
+                    onClick={() => setIsExpanded(false)}
+                    type="button"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  )
 }
 
 function PublicationAction({ item, linkedPage }) {
@@ -46,14 +98,8 @@ function PublicationCard({ item, linkedPage }) {
           {item.type ? <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-slate-500">{item.type}</span> : null}
         </div>
         <h3 className="mt-2 text-xl font-semibold text-slate-800">{item.title}</h3>
-        {item.description ? (
-          hasRichMarkup(item.description) ? (
-            <div className="mt-3 text-sm leading-7 text-slate-500" dangerouslySetInnerHTML={{ __html: item.description }} />
-          ) : (
-            <p className="mt-3 text-sm leading-7 text-slate-500">{item.description}</p>
-          )
-        ) : null}
-        {item.linkDescription ? <p className="mt-3 text-sm leading-7 text-slate-500">{item.linkDescription}</p> : null}
+        {item.description ? <PublicationExcerpt value={item.description} /> : null}
+        {!item.description && item.linkDescription ? <PublicationExcerpt value={item.linkDescription} limit={180} /> : null}
         <div className="mt-4">
           <PublicationAction item={item} linkedPage={linkedPage} />
         </div>

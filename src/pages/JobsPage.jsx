@@ -7,7 +7,7 @@ export function JobsPage() {
   const { data } = useSite()
 
   return (
-    <SectionTabs data={data} targetSection="Trabajos" overviewLabel="Trabajos" emptyText="Todavia no hay publicaciones asignadas a Trabajos.">
+    <SectionTabs data={data} targetSection="Trabajos" overviewLabel="Recursos laborales" emptyText="Todavia no hay publicaciones asignadas a Recursos laborales.">
       <div className="space-y-6">
         <SectionHeader title={data.jobs.title} text={data.jobs.description} />
         <section className="grid gap-5 lg:grid-cols-2">

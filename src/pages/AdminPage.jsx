@@ -15,7 +15,18 @@ import {
 } from '../data/defaultData'
 import { useSite } from '../state/SiteContext'
 
-const sections = ['Portada', 'Publicaciones', 'Paginas', 'Studio', 'Recursos', 'Helps', 'eBooks', 'Cursos', 'Trabajos', 'Legal']
+const sections = [
+  { id: 'Portada', label: 'Portada' },
+  { id: 'Publicaciones', label: 'Publicaciones' },
+  { id: 'Paginas', label: 'Paginas' },
+  { id: 'Studio', label: 'Studio' },
+  { id: 'Recursos', label: 'Markeplacet' },
+  { id: 'Helps', label: 'Helps' },
+  { id: 'eBooks', label: 'eBooks' },
+  { id: 'Cursos', label: 'Cursos' },
+  { id: 'Trabajos', label: 'Recursos laborales' },
+  { id: 'Legal', label: 'Legal' },
+]
 
 function PagePreview({ item }) {
   const [showPreview, setShowPreview] = useState(false)
@@ -79,6 +90,7 @@ export function AdminPage() {
   const [studioCategory, setStudioCategory] = useState(studioCategories[0])
   const [marketingCategory, setMarketingCategory] = useState(marketingCategories[0])
   const [helpsTabDraft, setHelpsTabDraft] = useState('')
+  const [publishKeyDraft, setPublishKeyDraft] = useState('')
   const site = useSite()
 
   const pageOptions = useMemo(
@@ -90,6 +102,10 @@ export function AdminPage() {
     site.setIsAdmin(true)
   }, [site])
 
+  useEffect(() => {
+    setPublishKeyDraft(site.adminToken || '')
+  }, [site.adminToken])
+
   return (
     <div className="grid gap-6 xl:grid-cols-[260px_1fr]">
       <aside className="glass h-fit p-4">
@@ -97,13 +113,13 @@ export function AdminPage() {
         <div className="space-y-2">
           {sections.map((item) => (
             <button
-              key={item}
+              key={item.id}
               className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm ${
-                section === item ? 'bg-slate-800 text-white' : 'bg-white/70 text-slate-700'
+                section === item.id ? 'bg-slate-800 text-white' : 'bg-white/70 text-slate-700'
               }`}
-              onClick={() => setSection(item)}
+              onClick={() => setSection(item.id)}
             >
-              {item}
+              {item.label}
               <span>{'>'}</span>
             </button>
           ))}
@@ -117,6 +133,36 @@ export function AdminPage() {
         {section === 'Portada' ? (
           <>
             <SectionHeader title="Editar portada" text="Cambia el titulo, texto e imagen principal." />
+            <div className="glass grid gap-3 p-5">
+              <h3 className="text-xl font-semibold text-slate-800">Publicacion compartida para todos</h3>
+              <p className="text-sm leading-7 text-slate-500">
+                Estado actual: <strong>{site.syncMode === 'cloud' ? 'Nube disponible' : 'Modo local'}</strong>. Si pegas la clave de publicacion, los cambios se enviaran a la nube y tus visitantes los veran.
+              </p>
+              <label className="grid gap-1 text-sm text-slate-600">
+                <span>Clave de publicacion en la nube</span>
+                <input className="input-field" value={publishKeyDraft} onChange={(event) => setPublishKeyDraft(event.target.value)} placeholder="Pega aqui tu ADMIN_WRITE_TOKEN" />
+              </label>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  className="rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-white"
+                  onClick={() => site.setAdminToken(publishKeyDraft)}
+                  type="button"
+                >
+                  Guardar clave
+                </button>
+                <button
+                  className="rounded-2xl bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700"
+                  onClick={() => {
+                    setPublishKeyDraft('')
+                    site.setAdminToken('')
+                  }}
+                  type="button"
+                >
+                  Quitar clave
+                </button>
+              </div>
+              <p className="text-xs leading-6 text-slate-400">La configuracion de Supabase esta explicada en el archivo `SUPABASE_SETUP.md` del proyecto.</p>
+            </div>
             <FormPanel
               title="Portada principal"
               initialValues={site.data.site}
@@ -128,6 +174,8 @@ export function AdminPage() {
                 { key: 'heroMediaType', label: 'Tipo de portada', type: 'select', options: ['image', 'video'] },
                 { key: 'heroMedia', label: 'Imagen o video horizontal', type: 'file', accept: 'image/*,video/*', fullWidth: true },
                 { key: 'paypalUrl', label: 'Enlace de donacion PayPal', fullWidth: true },
+                { key: 'footerAdCode', label: 'Codigo de anuncio del pie de pagina', type: 'textarea', fullWidth: true },
+                { key: 'sideAdCode', label: 'Codigo de anuncio lateral por universo', type: 'textarea', fullWidth: true },
               ]}
               onSubmit={site.updateSite}
             />
@@ -289,9 +337,9 @@ export function AdminPage() {
 
         {section === 'Recursos' ? (
           <>
-            <SectionHeader title="Recursos" text="Catalogo para recursos gratis o de pago con vista previa y boton de contacto por WhatsApp." />
+            <SectionHeader title="Markeplacet" text="Gestiona recursos descargables, plantillas con enlace a Canva y materiales gratuitos o de pago." />
             <FormPanel
-              title="Cabecera de Recursos"
+              title="Cabecera de Markeplacet"
               initialValues={site.data.marketing}
               fields={[
                 { key: 'title', label: 'Titulo' },
@@ -314,7 +362,16 @@ export function AdminPage() {
                 { key: 'previewNote', label: 'Texto de vista previa o detalle', type: 'textarea', fullWidth: true },
                 { key: 'accessType', label: 'Acceso', type: 'select', options: resourceAccessTypes, defaultValue: 'Gratis' },
                 { key: 'price', label: 'Precio o nota comercial' },
-                { key: 'resourceLink', label: 'Enlace del recurso o vista previa', fullWidth: true },
+                { key: 'resourceLink', label: 'Enlace del recurso o vista previa (Canva u otro)', fullWidth: true },
+                {
+                  key: 'downloadFile',
+                  label: 'Archivo descargable gratis o premium',
+                  type: 'file',
+                  accept: 'image/*,video/*,.ppt,.pptx,.pdf,.zip,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                  fullWidth: true,
+                },
+                { key: 'downloadName', label: 'Nombre del archivo para descargar', fullWidth: true },
+                { key: 'paymentLink', label: 'Enlace de pago externo (PayPal, Stripe u otro)', fullWidth: true },
                 { key: 'contactLabel', label: 'Texto del boton de contacto' },
                 { key: 'type', label: 'Tipo', type: 'select', options: ['image', 'video'] },
                 { key: 'ratio', label: 'Aspect ratio', type: 'select', options: aspectRatios },
@@ -339,7 +396,16 @@ export function AdminPage() {
                     { key: 'previewNote', label: 'Texto de vista previa o detalle', type: 'textarea', fullWidth: true },
                     { key: 'accessType', label: 'Acceso', type: 'select', options: resourceAccessTypes },
                     { key: 'price', label: 'Precio o nota comercial' },
-                    { key: 'resourceLink', label: 'Enlace del recurso o vista previa', fullWidth: true },
+                    { key: 'resourceLink', label: 'Enlace del recurso o vista previa (Canva u otro)', fullWidth: true },
+                    {
+                      key: 'downloadFile',
+                      label: 'Archivo descargable gratis o premium',
+                      type: 'file',
+                      accept: 'image/*,video/*,.ppt,.pptx,.pdf,.zip,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                      fullWidth: true,
+                    },
+                    { key: 'downloadName', label: 'Nombre del archivo para descargar', fullWidth: true },
+                    { key: 'paymentLink', label: 'Enlace de pago externo (PayPal, Stripe u otro)', fullWidth: true },
                     { key: 'contactLabel', label: 'Texto del boton de contacto' },
                     { key: 'type', label: 'Tipo', type: 'select', options: ['image', 'video'] },
                     { key: 'ratio', label: 'Aspect ratio', type: 'select', options: aspectRatios },
@@ -533,9 +599,9 @@ export function AdminPage() {
 
         {section === 'Trabajos' ? (
           <>
-            <SectionHeader title="Trabajos" text="Agrega servicios y trabajos realizados." />
+            <SectionHeader title="Recursos laborales" text="Agrega servicios, propuestas y recursos laborales." />
             <FormPanel
-              title="Cabecera de Trabajos"
+              title="Cabecera de Recursos laborales"
               initialValues={site.data.jobs}
               fields={[
                 { key: 'title', label: 'Titulo' },

@@ -3,9 +3,11 @@ import { defaultData } from '../data/defaultData'
 
 const LEGACY_STORAGE_KEY = 'digishoppress-multiverse-stable-v1'
 const EDITOR_MODE_KEY = 'digishoppress-multiverse-editor-mode'
+const ADMIN_TOKEN_KEY = 'digishoppress-multiverse-admin-token'
 const DB_NAME = 'digishoppress-multiverse-db'
 const STORE_NAME = 'site'
 const RECORD_ID = 'current-site'
+const REMOTE_ENDPOINT = '/api/site-content'
 const SiteContext = createContext(null)
 
 function isObject(value) {
@@ -119,26 +121,34 @@ function normalizeHelpsItem(item) {
 
 function normalizeMarketingItems(items = {}) {
   const oldMappings = {
-    Imagenes: 'Plantillas',
-    Videos: 'Videos',
-    Campanas: 'Diapositivas',
-    Plantillas: 'Plantillas',
-    Diapositivas: 'Diapositivas',
+    Imagenes: 'Redes sociales',
+    Videos: 'Negocios',
+    Campanas: 'Negocios',
+    Plantillas: 'Redes sociales',
+    Diapositivas: 'Educacion',
+    'Redes sociales': 'Redes sociales',
+    Educacion: 'Educacion',
+    'Recursos laborales': 'Recursos laborales',
+    Negocios: 'Negocios',
   }
 
   const normalized = {
-    Plantillas: [],
-    Videos: [],
-    Diapositivas: [],
+    'Redes sociales': [],
+    Educacion: [],
+    'Recursos laborales': [],
+    Negocios: [],
   }
 
   Object.entries(items || {}).forEach(([key, values]) => {
-    const target = oldMappings[key] || 'Plantillas'
+    const target = oldMappings[key] || 'Redes sociales'
     normalized[target] = [...normalized[target], ...((Array.isArray(values) ? values : []).map((item) => ({
       ...item,
       accessType: item?.accessType || 'Gratis',
       price: item?.price || '',
       resourceLink: item?.resourceLink || '',
+      downloadFile: item?.downloadFile || '',
+      downloadName: item?.downloadName || '',
+      paymentLink: item?.paymentLink || '',
       previewNote: item?.previewNote || '',
       contactLabel: item?.contactLabel || '',
     })))]
@@ -188,12 +198,17 @@ function normalizeData(data) {
       brandName: data.site?.brandName || defaultData.site.brandName,
       heroTitle: data.site?.heroTitle === 'Digishoppress Multiverse' ? defaultData.site.heroTitle : data.site?.heroTitle || defaultData.site.heroTitle,
       paypalUrl: data.site?.paypalUrl || '',
+      footerAdCode: data.site?.footerAdCode || '',
+      sideAdCode: data.site?.sideAdCode || '',
     },
     publications: (data.publications || []).map(normalizePublication),
     pages: ensureSystemPages((data.pages || []).map(normalizePage)),
     marketing: {
       ...data.marketing,
-      title: !data.marketing?.title || data.marketing?.title === 'Marketing Digishoppress' ? defaultData.marketing.title : data.marketing.title,
+      title:
+        !data.marketing?.title || data.marketing?.title === 'Marketing Digishoppress' || data.marketing?.title === 'Recursos'
+          ? defaultData.marketing.title
+          : data.marketing.title,
       description:
         !data.marketing?.description || data.marketing?.description === 'Area dedicada a piezas de marketing, campanas visuales, videos promocionales y recursos comerciales.'
           ? defaultData.marketing.description
@@ -206,6 +221,10 @@ function normalizeData(data) {
         ? data.helps.tabs
         : [...new Set(helpsItems.map((item) => item?.tab).filter(Boolean))],
       items: helpsItems.map(normalizeHelpsItem),
+    },
+    jobs: {
+      ...data.jobs,
+      title: !data.jobs?.title || data.jobs?.title === 'Trabajos y servicios' ? defaultData.jobs.title : data.jobs.title,
     },
   }
 }
@@ -286,6 +305,48 @@ function readLegacyStorage() {
   }
 }
 
+async function readRemoteSite() {
+  if (typeof window === 'undefined') {
+    throw new Error('No disponible fuera del navegador.')
+  }
+
+  const response = await fetch(REMOTE_ENDPOINT, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('La nube no esta disponible todavia.')
+  }
+
+  const payload = await response.json()
+  return payload?.content ?? null
+}
+
+async function writeRemoteSite(value, adminToken) {
+  if (!adminToken?.trim()) {
+    throw new Error('Falta la clave de publicacion.')
+  }
+
+  const response = await fetch(REMOTE_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-token': adminToken.trim(),
+    },
+    body: JSON.stringify({ content: value }),
+  })
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    throw new Error(payload?.error || 'No se pudo publicar en la nube.')
+  }
+
+  return response.json()
+}
+
 export function SiteProvider({ children }) {
   const [data, setData] = useState(defaultData)
   const [isAdmin, setIsAdmin] = useState(() => {
@@ -298,6 +359,14 @@ export function SiteProvider({ children }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [saveState, setSaveState] = useState('idle')
   const [saveMessage, setSaveMessage] = useState('')
+  const [syncMode, setSyncMode] = useState('local')
+  const [adminToken, setAdminTokenState] = useState(() => {
+    if (typeof window === 'undefined') {
+      return ''
+    }
+
+    return window.localStorage.getItem(ADMIN_TOKEN_KEY) || ''
+  })
   const hydratedRef = useRef(false)
 
   useEffect(() => {
@@ -305,18 +374,30 @@ export function SiteProvider({ children }) {
 
     async function hydrate() {
       try {
-        const stored = await readFromDatabase()
-        const legacy = stored ?? readLegacyStorage()
+        const remote = await readRemoteSite()
         if (active) {
-          setData(normalizeData(removeLegacyWelcomePublication(mergeDefaults(defaultData, legacy))))
+          setData(normalizeData(removeLegacyWelcomePublication(mergeDefaults(defaultData, remote))))
           setIsLoaded(true)
+          setSyncMode('cloud')
           hydratedRef.current = true
         }
       } catch {
-        if (active) {
-          setData(defaultData)
-          setIsLoaded(true)
-          hydratedRef.current = true
+        try {
+          const stored = await readFromDatabase()
+          const legacy = stored ?? readLegacyStorage()
+          if (active) {
+            setData(normalizeData(removeLegacyWelcomePublication(mergeDefaults(defaultData, legacy))))
+            setIsLoaded(true)
+            setSyncMode('local')
+            hydratedRef.current = true
+          }
+        } catch {
+          if (active) {
+            setData(defaultData)
+            setIsLoaded(true)
+            setSyncMode('local')
+            hydratedRef.current = true
+          }
         }
       }
     }
@@ -337,24 +418,44 @@ export function SiteProvider({ children }) {
     setSaveState('saving')
     setSaveMessage('Guardando cambios...')
 
-    writeToDatabase(data)
-      .then(() => {
+    async function persist() {
+      try {
+        if (syncMode === 'cloud' && adminToken?.trim()) {
+          await writeRemoteSite(data, adminToken)
+          if (active) {
+            setSaveState('saved')
+            setSaveMessage('Cambios publicados para todos.')
+          }
+          return
+        }
+
+        await writeToDatabase(data)
         if (active) {
           setSaveState('saved')
-          setSaveMessage('Cambios guardados.')
+          setSaveMessage(syncMode === 'cloud' ? 'Cambios guardados solo en este navegador. Falta la clave para publicarlos.' : 'Cambios guardados solo en este navegador.')
         }
-      })
-      .catch(() => {
-        if (active) {
-          setSaveState('error')
-          setSaveMessage('No se pudo guardar. Usa archivos mas pequenos.')
+      } catch (error) {
+        try {
+          await writeToDatabase(data)
+          if (active) {
+            setSaveState('error')
+            setSaveMessage(error?.message || 'No se pudo publicar. Se guardo solo en este navegador.')
+          }
+        } catch {
+          if (active) {
+            setSaveState('error')
+            setSaveMessage('No se pudo guardar. Usa archivos mas pequenos.')
+          }
         }
-      })
+      }
+    }
+
+    persist()
 
     return () => {
       active = false
     }
-  }, [data, isLoaded])
+  }, [adminToken, data, isLoaded, syncMode])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -364,9 +465,25 @@ export function SiteProvider({ children }) {
     window.localStorage.setItem(EDITOR_MODE_KEY, String(isAdmin))
   }, [isAdmin])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (adminToken) {
+      window.localStorage.setItem(ADMIN_TOKEN_KEY, adminToken)
+      return
+    }
+
+    window.localStorage.removeItem(ADMIN_TOKEN_KEY)
+  }, [adminToken])
+
   const actions = useMemo(
     () => ({
       setIsAdmin,
+      setAdminToken(value) {
+        setAdminTokenState(String(value || '').trim())
+      },
       updateSite(values) {
         setData((current) => ({ ...current, site: { ...current.site, ...values } }))
       },
@@ -532,12 +649,15 @@ export function SiteProvider({ children }) {
                 [item.category]: [
                   {
                     ...item,
-                    accessType: item.accessType || 'Gratis',
-                    price: item.price || '',
-                    resourceLink: item.resourceLink || '',
-                    previewNote: item.previewNote || '',
-                    contactLabel: item.contactLabel || '',
-                    id: createId('marketing'),
+                      accessType: item.accessType || 'Gratis',
+                      price: item.price || '',
+                      resourceLink: item.resourceLink || '',
+                      downloadFile: item.downloadFile || '',
+                      downloadName: item.downloadName || '',
+                      paymentLink: item.paymentLink || '',
+                      previewNote: item.previewNote || '',
+                      contactLabel: item.contactLabel || '',
+                      id: createId('marketing'),
                   },
                   ...current.marketing.items[item.category],
                 ],
@@ -615,7 +735,11 @@ export function SiteProvider({ children }) {
     [],
   )
 
-  return <SiteContext.Provider value={{ data, isAdmin, isLoaded, saveState, saveMessage, ...actions }}>{children}</SiteContext.Provider>
+  return (
+    <SiteContext.Provider value={{ data, isAdmin, isLoaded, saveState, saveMessage, syncMode, adminToken, ...actions }}>
+      {children}
+    </SiteContext.Provider>
+  )
 }
 
 export function useSite() {
