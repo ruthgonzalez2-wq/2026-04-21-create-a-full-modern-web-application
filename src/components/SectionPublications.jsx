@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
+import { useSite } from '../state/SiteContext'
 
 function hasRichMarkup(value) {
   return /<\/?[a-z][\s\S]*>/i.test(value || '')
@@ -131,7 +132,20 @@ function PageCard({ page }) {
 }
 
 export function SectionPublications({ data, targetSection, embedded = false, showEmpty = false, emptyText = 'Todavia no hay publicaciones en esta seccion.' }) {
-  const publications = data.publications.filter((item) => item.status === 'Publicado' && item.targetSection === targetSection)
+  const { posts } = useSite()
+  const supabasePosts = targetSection === 'Inicio'
+    ? posts.map((item) => ({
+        id: item.id,
+        title: item.title,
+        image: item.image_url,
+        type: 'Post',
+        category: item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Publicacion',
+        description: '',
+      }))
+    : []
+  const publications = supabasePosts.length
+    ? supabasePosts
+    : data.publications.filter((item) => item.status === 'Publicado' && item.targetSection === targetSection)
   const pages = data.pages.filter((item) => item.status === 'Publicado' && item.targetSection === targetSection)
   const hasContent = publications.length || pages.length
 

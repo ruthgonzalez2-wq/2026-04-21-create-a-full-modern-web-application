@@ -90,21 +90,26 @@ export function AdminPage() {
   const [studioCategory, setStudioCategory] = useState(studioCategories[0])
   const [marketingCategory, setMarketingCategory] = useState(marketingCategories[0])
   const [helpsTabDraft, setHelpsTabDraft] = useState('')
-  const [publishKeyDraft, setPublishKeyDraft] = useState('')
   const site = useSite()
 
   const pageOptions = useMemo(
     () => [{ value: '', label: 'Sin pagina enlazada' }, ...site.data.pages.map((item) => ({ value: item.slug, label: item.title || item.slug }))],
     [site.data.pages],
   )
+  const galleryPosts = useMemo(
+    () =>
+      site.posts.map((item) => ({
+        ...item,
+        image: item.image_url,
+        type: 'Post',
+        category: item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Post',
+      })),
+    [site.posts],
+  )
 
   useEffect(() => {
     site.setIsAdmin(true)
   }, [site])
-
-  useEffect(() => {
-    setPublishKeyDraft(site.adminToken || '')
-  }, [site.adminToken])
 
   return (
     <div className="grid gap-6 xl:grid-cols-[260px_1fr]">
@@ -133,36 +138,6 @@ export function AdminPage() {
         {section === 'Portada' ? (
           <>
             <SectionHeader title="Editar portada" text="Cambia el titulo, texto e imagen principal." />
-            <div className="glass grid gap-3 p-5">
-              <h3 className="text-xl font-semibold text-slate-800">Publicacion compartida para todos</h3>
-              <p className="text-sm leading-7 text-slate-500">
-                Estado actual: <strong>{site.syncMode === 'cloud' ? 'Nube disponible' : 'Modo local'}</strong>. Si pegas la clave de publicacion, los cambios se enviaran a la nube y tus visitantes los veran.
-              </p>
-              <label className="grid gap-1 text-sm text-slate-600">
-                <span>Clave de publicacion en la nube</span>
-                <input className="input-field" value={publishKeyDraft} onChange={(event) => setPublishKeyDraft(event.target.value)} placeholder="Pega aqui tu ADMIN_WRITE_TOKEN" />
-              </label>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  className="rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-white"
-                  onClick={() => site.setAdminToken(publishKeyDraft)}
-                  type="button"
-                >
-                  Guardar clave
-                </button>
-                <button
-                  className="rounded-2xl bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700"
-                  onClick={() => {
-                    setPublishKeyDraft('')
-                    site.setAdminToken('')
-                  }}
-                  type="button"
-                >
-                  Quitar clave
-                </button>
-              </div>
-              <p className="text-xs leading-6 text-slate-400">La configuracion de Supabase esta explicada en el archivo `SUPABASE_SETUP.md` del proyecto.</p>
-            </div>
             <FormPanel
               title="Portada principal"
               initialValues={site.data.site}
@@ -184,49 +159,24 @@ export function AdminPage() {
 
         {section === 'Publicaciones' ? (
           <>
-            <SectionHeader title="Publicaciones" text="Crea entradas para inicio y decide si llevan a una pagina interna, enlace externo o PDF." />
+            <SectionHeader title="Publicaciones" text="Sube imagenes a Supabase Storage y publica posts visibles para todos en la galeria publica." />
             <FormPanel
-              title="Nueva publicacion"
+              title="Nuevo post"
               fields={[
-                { key: 'status', label: 'Estado', type: 'select', options: publishStatuses, defaultValue: 'Publicado' },
-                { key: 'type', label: 'Tipo de contenido', type: 'select', options: publicationTypes, defaultValue: 'Entrada' },
-                { key: 'targetSection', label: 'Destino de la publicacion', type: 'select', options: destinationSectionOptions, defaultValue: 'Inicio' },
-                { key: 'category', label: 'Categoria' },
                 { key: 'title', label: 'Titulo' },
-                { key: 'description', label: 'Descripcion', type: 'richtext', fullWidth: true },
-                { key: 'tags', label: 'Etiquetas (separadas por coma)', fullWidth: true },
-                { key: 'image', label: 'Imagen', type: 'file', accept: 'image/*', fullWidth: true },
-                { key: 'pageSlug', label: 'Pagina interna enlazada', type: 'select', options: pageOptions, fullWidth: true },
-                { key: 'linkDescription', label: 'De que trata el enlace o archivo', type: 'textarea', fullWidth: true },
-                { key: 'linkLabel', label: 'Texto del boton' },
-                { key: 'linkUrl', label: 'Enlace externo', fullWidth: true },
-                { key: 'pdfFile', label: 'Archivo PDF', type: 'file', accept: 'application/pdf', fullWidth: true },
+                { key: 'file', label: 'Imagen', type: 'file', accept: 'image/*', fullWidth: true },
               ]}
-              onSubmit={site.addPublication}
+              onSubmit={(values) => site.createPost(values.title, values.file)}
             />
             <div className="grid gap-5 lg:grid-cols-2">
-              {site.data.publications.map((item) => (
+              {galleryPosts.map((item) => (
                 <AdminItemEditor
                   key={item.id}
-                  title={`Editar ${item.title}`}
-                  item={{ ...item, tags: item.tags?.join(', ') || '' }}
-                  fields={[
-                    { key: 'status', label: 'Estado', type: 'select', options: publishStatuses },
-                    { key: 'type', label: 'Tipo de contenido', type: 'select', options: publicationTypes },
-                    { key: 'targetSection', label: 'Destino de la publicacion', type: 'select', options: destinationSectionOptions },
-                    { key: 'category', label: 'Categoria' },
-                    { key: 'title', label: 'Titulo' },
-                    { key: 'description', label: 'Descripcion', type: 'richtext', fullWidth: true },
-                    { key: 'tags', label: 'Etiquetas (separadas por coma)', fullWidth: true },
-                    { key: 'image', label: 'Imagen', type: 'file', accept: 'image/*', fullWidth: true },
-                    { key: 'pageSlug', label: 'Pagina interna enlazada', type: 'select', options: pageOptions, fullWidth: true },
-                    { key: 'linkDescription', label: 'De que trata el enlace o archivo', type: 'textarea', fullWidth: true },
-                    { key: 'linkLabel', label: 'Texto del boton' },
-                    { key: 'linkUrl', label: 'Enlace externo', fullWidth: true },
-                    { key: 'pdfFile', label: 'Archivo PDF', type: 'file', accept: 'application/pdf', fullWidth: true },
-                  ]}
-                  onSave={(values) => site.updatePublication(item.id, values)}
-                  onDelete={() => site.deletePublication(item.id)}
+                  title={`Eliminar ${item.title}`}
+                  item={item}
+                  fields={[]}
+                  onSave={() => {}}
+                  onDelete={() => site.deletePost(item.id)}
                 >
                   <SimpleCard title={item.title} subtitle={`${item.category || 'Sin categoria'} · ${item.type}`} description={item.description || item.linkDescription} image={item.image} />
                 </AdminItemEditor>

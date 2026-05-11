@@ -1,51 +1,47 @@
 # Supabase Setup
 
-## 1. Crea la tabla
+Usa solo estas variables en Vercel:
 
-Ejecuta este SQL en Supabase:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+## 1. Bucket de imagenes
+
+Crea un bucket publico llamado:
+
+- `images`
+
+## 2. Tabla posts
+
+Ejecuta este SQL:
 
 ```sql
-create table if not exists public.site_content (
-  key text primary key,
-  content jsonb not null default '{}'::jsonb,
-  updated_at timestamptz not null default now()
+create table if not exists public.posts (
+  id bigint generated always as identity primary key,
+  title text not null,
+  image_url text not null,
+  created_at timestamptz not null default now()
 );
-
-insert into public.site_content (key, content)
-values ('main', '{}'::jsonb)
-on conflict (key) do nothing;
 ```
 
-## 2. Toma estos valores
+## 3. Politicas minimas
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- una clave privada tuya para `ADMIN_WRITE_TOKEN`
+Si el proyecto es solo para que publique el admin desde la web, necesitas permitir:
 
-## 3. Ponlos en Vercel
+- insertar en `posts`
+- leer `posts`
+- subir y leer en bucket `images`
 
-En tu proyecto de Vercel:
+## 4. Variables en Vercel
 
-- `Settings`
-- `Environment Variables`
+En `Settings -> Environment Variables` agrega:
 
-Agrega:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `ADMIN_WRITE_TOKEN`
+## 5. Volver a desplegar
 
-## 4. Publicar desde el panel
-
-En `/admin`, pega la misma clave de `ADMIN_WRITE_TOKEN` en:
-
-- `Clave de publicacion en la nube`
-
-Cuando esa clave este puesta:
-
-- tus cambios se publican para todos
-- los visitantes ven el contenido nuevo
-
-Si no la pones:
-
-- los cambios solo se guardan en tu navegador
+```powershell
+cd "C:\Users\ruthg\Documents\Codex\2026-04-21-create-a-full-modern-web-application"
+vercel.cmd --prod
+```

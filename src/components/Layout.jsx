@@ -72,7 +72,7 @@ export function Layout({ children }) {
         <main className="flex-1">{children}</main>
 
         <footer className="glass mt-10 flex flex-col gap-4 px-5 py-5 text-sm text-slate-500">
-          <AdCodeSlot code={data.site.footerAdCode} title="Anuncio de pie de pagina" compact />
+          {data.site.footerAdCode ? <AdCodeSlot code={data.site.footerAdCode} title="Anuncio de pie de pagina" compact /> : null}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p>&copy; 2026 {data.site.brandName || 'Digishop Press Multiverse'}. Todos los derechos reservados. Autor: Ruth Gonzalez</p>
             <div className="flex flex-wrap gap-4">

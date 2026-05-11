@@ -1,13 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { defaultData } from '../data/defaultData'
+import { isSupabaseReady, supabase } from '../lib/supabase'
 
 const LEGACY_STORAGE_KEY = 'digishoppress-multiverse-stable-v1'
 const EDITOR_MODE_KEY = 'digishoppress-multiverse-editor-mode'
-const ADMIN_TOKEN_KEY = 'digishoppress-multiverse-admin-token'
 const DB_NAME = 'digishoppress-multiverse-db'
 const STORE_NAME = 'site'
 const RECORD_ID = 'current-site'
-const REMOTE_ENDPOINT = '/api/site-content'
 const SiteContext = createContext(null)
 
 function isObject(value) {
@@ -305,50 +304,76 @@ function readLegacyStorage() {
   }
 }
 
-async function readRemoteSite() {
-  if (typeof window === 'undefined') {
-    throw new Error('No disponible fuera del navegador.')
+async function uploadPostImage(file) {
+  if (!supabase) {
+    throw new Error('Supabase no esta configurado.')
   }
 
-  const response = await fetch(REMOTE_ENDPOINT, {
-    method: 'GET',
-    headers: {
-      Accept: 'application/json',
-    },
-  })
+  const fileName = `${Date.now()}-${String(file.name || 'imagen').replace(/\s+/g, '-')}`
+  const { error } = await supabase.storage.from('images').upload(fileName, file)
 
-  if (!response.ok) {
-    throw new Error('La nube no esta disponible todavia.')
+  if (error) {
+    throw error
   }
 
-  const payload = await response.json()
-  return payload?.content ?? null
+  const { data } = supabase.storage.from('images').getPublicUrl(fileName)
+  return data.publicUrl
 }
 
-async function writeRemoteSite(value, adminToken) {
-  if (!adminToken?.trim()) {
-    throw new Error('Falta la clave de publicacion.')
+async function fetchPostsFromSupabase() {
+  if (!supabase) {
+    return []
   }
 
-  const response = await fetch(REMOTE_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-token': adminToken.trim(),
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    throw error
+  }
+
+  return data || []
+}
+
+async function createPostInSupabase({ title, file }) {
+  if (!supabase) {
+    throw new Error('Supabase no esta configurado.')
+  }
+
+  if (!title?.trim() || !file) {
+    throw new Error('El titulo y la imagen son obligatorios.')
+  }
+
+  const imageUrl = await uploadPostImage(file)
+  const { error } = await supabase.from('posts').insert([
+    {
+      title: title.trim(),
+      image_url: imageUrl,
     },
-    body: JSON.stringify({ content: value }),
-  })
+  ])
 
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null)
-    throw new Error(payload?.error || 'No se pudo publicar en la nube.')
+  if (error) {
+    throw error
+  }
+}
+
+async function deletePostFromSupabase(id) {
+  if (!supabase) {
+    throw new Error('Supabase no esta configurado.')
   }
 
-  return response.json()
+  const { error } = await supabase.from('posts').delete().eq('id', id)
+  if (error) {
+    throw error
+  }
 }
 
 export function SiteProvider({ children }) {
   const [data, setData] = useState(defaultData)
+  const [posts, setPosts] = useState([])
+  const [postsLoaded, setPostsLoaded] = useState(false)
   const [isAdmin, setIsAdmin] = useState(() => {
     if (typeof window === 'undefined') {
       return false
@@ -359,14 +384,6 @@ export function SiteProvider({ children }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [saveState, setSaveState] = useState('idle')
   const [saveMessage, setSaveMessage] = useState('')
-  const [syncMode, setSyncMode] = useState('local')
-  const [adminToken, setAdminTokenState] = useState(() => {
-    if (typeof window === 'undefined') {
-      return ''
-    }
-
-    return window.localStorage.getItem(ADMIN_TOKEN_KEY) || ''
-  })
   const hydratedRef = useRef(false)
 
   useEffect(() => {
@@ -374,35 +391,56 @@ export function SiteProvider({ children }) {
 
     async function hydrate() {
       try {
-        const remote = await readRemoteSite()
+        const stored = await readFromDatabase()
+        const legacy = stored ?? readLegacyStorage()
         if (active) {
-          setData(normalizeData(removeLegacyWelcomePublication(mergeDefaults(defaultData, remote))))
+          setData(normalizeData(removeLegacyWelcomePublication(mergeDefaults(defaultData, legacy))))
           setIsLoaded(true)
-          setSyncMode('cloud')
           hydratedRef.current = true
         }
       } catch {
-        try {
-          const stored = await readFromDatabase()
-          const legacy = stored ?? readLegacyStorage()
-          if (active) {
-            setData(normalizeData(removeLegacyWelcomePublication(mergeDefaults(defaultData, legacy))))
-            setIsLoaded(true)
-            setSyncMode('local')
-            hydratedRef.current = true
-          }
-        } catch {
-          if (active) {
-            setData(defaultData)
-            setIsLoaded(true)
-            setSyncMode('local')
-            hydratedRef.current = true
-          }
+        if (active) {
+          setData(defaultData)
+          setIsLoaded(true)
+          hydratedRef.current = true
         }
       }
     }
 
     hydrate()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    async function loadPosts() {
+      if (!isSupabaseReady()) {
+        if (active) {
+          setPosts([])
+          setPostsLoaded(true)
+        }
+        return
+      }
+
+      try {
+        const rows = await fetchPostsFromSupabase()
+        if (active) {
+          setPosts(rows)
+          setPostsLoaded(true)
+        }
+      } catch {
+        if (active) {
+          setPosts([])
+          setPostsLoaded(true)
+        }
+      }
+    }
+
+    loadPosts()
 
     return () => {
       active = false
@@ -418,44 +456,24 @@ export function SiteProvider({ children }) {
     setSaveState('saving')
     setSaveMessage('Guardando cambios...')
 
-    async function persist() {
-      try {
-        if (syncMode === 'cloud' && adminToken?.trim()) {
-          await writeRemoteSite(data, adminToken)
-          if (active) {
-            setSaveState('saved')
-            setSaveMessage('Cambios publicados para todos.')
-          }
-          return
-        }
-
-        await writeToDatabase(data)
+    writeToDatabase(data)
+      .then(() => {
         if (active) {
           setSaveState('saved')
-          setSaveMessage(syncMode === 'cloud' ? 'Cambios guardados solo en este navegador. Falta la clave para publicarlos.' : 'Cambios guardados solo en este navegador.')
+          setSaveMessage('Cambios guardados en este navegador.')
         }
-      } catch (error) {
-        try {
-          await writeToDatabase(data)
-          if (active) {
-            setSaveState('error')
-            setSaveMessage(error?.message || 'No se pudo publicar. Se guardo solo en este navegador.')
-          }
-        } catch {
-          if (active) {
-            setSaveState('error')
-            setSaveMessage('No se pudo guardar. Usa archivos mas pequenos.')
-          }
+      })
+      .catch(() => {
+        if (active) {
+          setSaveState('error')
+          setSaveMessage('No se pudo guardar. Usa archivos mas pequenos.')
         }
-      }
-    }
-
-    persist()
+      })
 
     return () => {
       active = false
     }
-  }, [adminToken, data, isLoaded, syncMode])
+  }, [data, isLoaded])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -465,24 +483,31 @@ export function SiteProvider({ children }) {
     window.localStorage.setItem(EDITOR_MODE_KEY, String(isAdmin))
   }, [isAdmin])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    if (adminToken) {
-      window.localStorage.setItem(ADMIN_TOKEN_KEY, adminToken)
-      return
-    }
-
-    window.localStorage.removeItem(ADMIN_TOKEN_KEY)
-  }, [adminToken])
-
   const actions = useMemo(
     () => ({
       setIsAdmin,
-      setAdminToken(value) {
-        setAdminTokenState(String(value || '').trim())
+      async loadPosts() {
+        if (!isSupabaseReady()) {
+          setPosts([])
+          setPostsLoaded(true)
+          return
+        }
+
+        const rows = await fetchPostsFromSupabase()
+        setPosts(rows)
+        setPostsLoaded(true)
+      },
+      async createPost(title, file) {
+        await createPostInSupabase({ title, file })
+        const rows = await fetchPostsFromSupabase()
+        setPosts(rows)
+        setPostsLoaded(true)
+      },
+      async deletePost(id) {
+        await deletePostFromSupabase(id)
+        const rows = await fetchPostsFromSupabase()
+        setPosts(rows)
+        setPostsLoaded(true)
       },
       updateSite(values) {
         setData((current) => ({ ...current, site: { ...current.site, ...values } }))
@@ -736,7 +761,7 @@ export function SiteProvider({ children }) {
   )
 
   return (
-    <SiteContext.Provider value={{ data, isAdmin, isLoaded, saveState, saveMessage, syncMode, adminToken, ...actions }}>
+    <SiteContext.Provider value={{ data, posts, postsLoaded, isAdmin, isLoaded, saveState, saveMessage, ...actions }}>
       {children}
     </SiteContext.Provider>
   )
